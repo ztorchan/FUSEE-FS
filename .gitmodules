@@ -1,3 +1,15 @@
 [submodule "ycsb-test/YCSB-C"]
 	path = ycsb-test/YCSB-C
 	url = https://gitee.com/bernardshen/YCSB-C.git
+[submodule "third-party/eRPC"]
+	path = third-party/eRPC
+	url = git@github.com:ztorchan/eRPC.git
+[submodule "third-party/flatbuffers"]
+	path = third-party/flatbuffers
+	url = git@github.com:google/flatbuffers.git
+[submodule "third-party/rapidjson"]
+	path = third-party/rapidjson
+	url = git@github.com:Tencent/rapidjson.git
+[submodule "third-party/ior"]
+	path = third-party/ior
+	url = git@github.com:hpc/ior.git

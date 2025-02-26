@@ -1,0 +1,22 @@
+namespace fuseefs;
+
+enum MDOpType: byte {
+  None = 0,
+  Mkdir,
+  Rmdir,
+  Creat,
+  Unlink,
+  Stat,
+  Rename
+}
+
+table MDRequest {
+  op: MDOpType;
+  uid: uint32;
+  gid: uint32;
+  path: string;
+  newpath: string;
+  mode: uint32;
+}
+
+root_type MDRequest;

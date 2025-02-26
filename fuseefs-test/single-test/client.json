@@ -1,0 +1,11 @@
+{
+  "self_host": "127.0.0.1",
+  "self_base_port": 31853,
+  "mds": [
+    {
+      "host": "127.0.0.1",
+      "port": 31852,
+      "threads_num": 1
+    }
+  ]
+}
