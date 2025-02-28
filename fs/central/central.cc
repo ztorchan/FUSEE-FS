@@ -34,26 +34,18 @@ void Central::LockHandler(erpc::ReqHandle* req_handle, void* _ctx) {
   CentralServerContext* ctx = reinterpret_cast<CentralServerContext*>(_ctx);
   Central* central = reinterpret_cast<Central*>(ctx->owner_);
   // try to lock
-  uint64_t* ids = reinterpret_cast<uint64_t*>(req_handle->get_req_msgbuf()->buf_);
+  uint64_t id = *reinterpret_cast<uint64_t*>(req_handle->get_req_msgbuf()->buf_);
   std::unique_lock<std::mutex> lck(central->lck_set_mtx_);
-  for (int i = 0; i < kMaxLockInodeNum; i++) {
-    if (ids[i] == kInvalidInodeId) {
-      break;
-    }
-    if (central->lock_set_.count(ids[i]) != 0) {
-      erpc::MsgBuffer& resp = req_handle->pre_resp_msgbuf_;
-      erpc::Rpc<erpc::CTransport>::resize_msg_buffer(&resp, sizeof(uint8_t));
-      resp.buf_[0] = 1;
-      ctx->rpc_->enqueue_response(req_handle, &resp);
-      return;
-    }
+  if (central->lock_set_.count(id) != 0) {
+    printf("Lock: %lu fail\n", id);
+    erpc::MsgBuffer& resp = req_handle->pre_resp_msgbuf_;
+    erpc::Rpc<erpc::CTransport>::resize_msg_buffer(&resp, sizeof(uint8_t));
+    resp.buf_[0] = 1;
+    ctx->rpc_->enqueue_response(req_handle, &resp);
+    return;
   }
-  for (int i = 0; i < kMaxLockInodeNum; i++) {
-    if (ids[i] == kInvalidInodeId) {
-      break;
-    }
-    central->lock_set_.insert(ids[i]);
-  }
+  central->lock_set_.insert(id);
+  printf("Lock: %lu success\n", id);
   erpc::MsgBuffer& resp = req_handle->pre_resp_msgbuf_;
   erpc::Rpc<erpc::CTransport>::resize_msg_buffer(&resp, sizeof(uint8_t));
   resp.buf_[0] = 0;
@@ -64,14 +56,10 @@ void Central::UnlockHandler(erpc::ReqHandle* req_handle, void* _ctx) {
   CentralServerContext* ctx = reinterpret_cast<CentralServerContext*>(_ctx);
   Central* central = reinterpret_cast<Central*>(ctx->owner_);
   // unlock
-  uint64_t* ids = reinterpret_cast<uint64_t*>(req_handle->get_req_msgbuf()->buf_);
+  uint64_t id = *reinterpret_cast<uint64_t*>(req_handle->get_req_msgbuf()->buf_);
   std::unique_lock<std::mutex> lck(central->lck_set_mtx_);
-  for (int i = 0; i < kMaxLockInodeNum; i++) {
-    if (ids[i] == kInvalidInodeId) {
-      break;
-    }
-    central->lock_set_.erase(ids[i]);
-  }
+  printf("Unlock: %lu\n", id);
+  central->lock_set_.erase(id);
   erpc::MsgBuffer& resp = req_handle->pre_resp_msgbuf_;
   erpc::Rpc<erpc::CTransport>::resize_msg_buffer(&resp, sizeof(uint8_t));
   resp.buf_[0] = 0;

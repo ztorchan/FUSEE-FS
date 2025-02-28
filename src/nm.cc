@@ -519,11 +519,14 @@ int UDPNetworkManager::nm_rdma_read_from_sid(void * local_addr, uint32_t local_l
     return 0;
 }
 
+std::atomic_uint64_t rtt_;
+
 int UDPNetworkManager::rdma_post_sr_lists_sync_unsignaled(IbvSrList * sr_lists,
         uint32_t num_sr_lists) {
     std::map<uint8_t, std::vector<IbvSrList *> > server_id_sr_list_map;
     for (int i = 0; i < num_sr_lists; i ++) {
         IbvSrList * cur_sr_list = &sr_lists[i];
+        rtt_ += cur_sr_list->num_sr;
         server_id_sr_list_map[cur_sr_list->server_id].push_back(cur_sr_list);
     }
 
@@ -551,6 +554,7 @@ int UDPNetworkManager::rdma_post_sr_lists_sync(IbvSrList * sr_lists,
     std::map<uint8_t, std::vector<IbvSrList *> > server_id_sr_list_map;
     for (int i = 0; i < num_sr_lists; i ++) {
         IbvSrList * cur_sr_list = &sr_lists[i];
+        rtt_ += cur_sr_list->num_sr;
         server_id_sr_list_map[cur_sr_list->server_id].push_back(cur_sr_list);
     }
 
@@ -596,6 +600,7 @@ int UDPNetworkManager::rdma_post_sr_lists_async_unsignaled(IbvSrList * sr_lists,
     std::map<uint8_t, std::vector<IbvSrList *> > server_id_sr_list_map;
     for (int i = 0; i < num_sr_lists; i ++) {
         IbvSrList * cur_sr_list = &sr_lists[i];
+        rtt_ += cur_sr_list->num_sr;
         server_id_sr_list_map[cur_sr_list->server_id].push_back(cur_sr_list);
     }
 
@@ -621,6 +626,7 @@ int UDPNetworkManager::rdma_post_sr_lists_async(IbvSrList * sr_lists,
     std::map<uint8_t, std::vector<IbvSrList *> > server_id_sr_list_map;
     for (int i = 0; i < num_sr_lists; i ++) {
         IbvSrList * cur_sr_list = &sr_lists[i];
+        rtt_ += cur_sr_list->num_sr;
         server_id_sr_list_map[cur_sr_list->server_id].push_back(cur_sr_list);
     }
 
@@ -661,6 +667,7 @@ int UDPNetworkManager::rdma_post_sr_list_batch_sync(std::vector<IbvSrList *> & s
         uint8_t server_id;
         for (int j = 0; j < sr_list_num_batch[i]; j ++) {
             server_id = sr_list_batch[i][j].server_id;
+            rtt_ += sr_list_batch[i][j].num_sr;
             server_id_sr_list_map[server_id].push_back(&sr_list_batch[i][j]);
         }
     }
@@ -718,6 +725,7 @@ int UDPNetworkManager::rdma_post_sr_list_batch_async(std::vector<IbvSrList *> & 
         uint8_t server_id;
         for (int j = 0; j < sr_list_num_batch[i]; j ++) {
             server_id = sr_list_batch[i][j].server_id;
+            rtt_ += sr_list_batch[i][j].num_sr;
             server_id_sr_list_map[server_id].push_back(&sr_list_batch[i][j]);
         }
     }

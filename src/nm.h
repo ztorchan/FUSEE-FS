@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <netdb.h>
 
+#include <atomic>
 #include <vector>
 #include <map>
 #include <mutex>
@@ -14,6 +15,8 @@
 
 #include "kv_utils.h"
 #include "ib.h"
+
+extern std::atomic_uint64_t rtt_;
 
 class UDPNetworkManager {
 private:

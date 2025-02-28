@@ -29,12 +29,12 @@ add_subdirectory(third-party/flatbuffers)
 # enable_testing()
 # add_subdirectory(tests)
 
-set(FB_SCHEMA
-  fs/fbs/mds_request.fbs
-)
-build_flatbuffers("${FB_SCHEMA}" "" fbschemas "" fs/fbs_h "" "")
-add_library(flatbuffers_proto INTERFACE)
-add_dependencies(flatbuffers_proto fbschemas)
+# set(FB_SCHEMA
+#   fs/fbs/mds_request.fbs
+# )
+# build_flatbuffers("${FB_SCHEMA}" "" fbschemas "" fs/fbs_h "" "")
+# add_library(flatbuffers_proto INTERFACE)
+# add_dependencies(flatbuffers_proto fbschemas)
 
 set (
   FUSEEFS_DEPS
@@ -49,17 +49,11 @@ set (
 file(GLOB CC_FUSEEFS_COMMON fs/common/*.cc)
 add_library(fuseefs_common ${CC_FUSEEFS_COMMON})
 
-# build mds
-set(CC_FUSEEFS_MDS_SERVER mds_main.cc)
-
-file(GLOB CC_FUSEEFS_MDS fs/mds/*.cc)
-list(REMOVE_ITEM CC_MDS fs/mds/${CC_FUSEEFS_MDS_SERVER})
-add_library(fuseefs_mds ${CC_FUSEEFS_MDS})
-add_dependencies(fuseefs_mds flatbuffers_proto)
-target_compile_definitions(fuseefs_mds PUBLIC -DERPC_INFINIBAND=true)
-
-add_executable(fuseefs_mds_server fs/mds/${CC_FUSEEFS_MDS_SERVER})
-target_link_libraries(fuseefs_mds_server fuseefs_mds fuseefs_common flatbuffers_proto erpc::erpc libddckv ${FUSEEFS_DEPS})
+# build engine
+file(GLOB CC_FUSEEFS_ENGINE fs/engine/*.cc)
+add_library(fuseefs_engine ${CC_FUSEEFS_ENGINE})
+target_compile_definitions(fuseefs_engine PUBLIC -DERPC_INFINIBAND=true)
+target_link_libraries(fuseefs_engine fuseefs_common erpc::erpc ${FUSEEFS_DEPS})
 
 # build central
 set(CC_FUSEEFS_CENTRAL_SERVER central_main.cc)
@@ -77,16 +71,11 @@ set(CC_FUSEEFS_PMPOOL_SERVER pmpool_main.cc)
 add_executable(fuseefs_pmpool_server fs/pmpool/${CC_FUSEEFS_PMPOOL_SERVER})
 target_link_libraries(fuseefs_pmpool_server libddckv ${FUSEEFS_DEPS})
 
-# build client
-add_library(fuseefs_client fs/client/posix_wrapper.cc)
-target_link_libraries(fuseefs_client erpc::erpc ${FUSEEFS_DEPS})
-target_compile_options(fuseefs_client PUBLIC -fPIC)
-target_compile_definitions(fuseefs_client PUBLIC -DERPC_INFINIBAND=true)
-add_dependencies(fuseefs_client flatbuffers_proto)
-
-add_library(fuseefs_hook SHARED fs/client/hook.c)
-target_compile_options(fuseefs_hook PUBLIC -fPIC)
-target_link_libraries(fuseefs_hook fuseefs_client fuseefs_common)
 
 # build simple test
 add_executable(fuseefs_simple_test fuseefs-test/simple-test/simple-test.cc)
+target_link_libraries(fuseefs_simple_test fuseefs_engine fuseefs_common erpc::erpc libddckv ${FUSEEFS_DEPS})
+
+# build multi test
+add_executable(fuseefs_multi_test fuseefs-test/multi-test/multi-test.cc)
+target_link_libraries(fuseefs_multi_test fuseefs_engine fuseefs_common erpc::erpc libddckv ${FUSEEFS_DEPS})

@@ -1,105 +1,65 @@
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <iostream>
+#include <gflags/gflags.h>
 
-#define FUSEEFS_MOUNT_POINT "/fuseefs"
+#include "fs/engine/engine.h"
 
-int main() {
-  // Test mkdir
-  std::string dirPath = FUSEEFS_MOUNT_POINT;
-  dirPath += "/testDir";
-  int ret;
+DEFINE_string(local_erpc_hostname, "", "local erpc hostname");
+DEFINE_uint32(local_erpc_port, 0, "local erpc port");
+DEFINE_string(central_erpc_hostname, "", "central erpc hostname");
+DEFINE_uint32(central_erpc_port, 0, "central erpc port");
+DEFINE_string(fusee_client_conf, "", "fusee client config file");
 
-  if ((ret = mkdir(dirPath.c_str(), 0777)) < 0) {
-    std::cerr << "mkdir failed: "<< ret << "\n";
-    return 1;
-  } else {
-    std::cout << "mkdir success: "<< ret << "\n"; 
-  }
+int main(int argc, char* argv[]) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  // Test creat
-  std::string filePath = dirPath;
-  filePath += "/testFile";
-  if ((ret = creat(filePath.c_str(), 0666)) < 0) {
-    std::cerr << "creat failed: "<< ret << "\n";
-    return 1;
-  } else {
-    std::cout << "creat success: "<< ret << "\n";
-  }
+  GlobalConfig fusee_client_conf;
+  int ret = load_config(FLAGS_fusee_client_conf.c_str(), &fusee_client_conf);
+  assert(ret == 0);
 
-  // Test stat
-  struct stat st;
-  if ((ret = stat(filePath.c_str(), &st)) < 0) {
-    std::cerr << "stat failed: "<< ret << "\n";
-    return 1;
-  } else {
-    std::cout << "stat success: "<< ret << "\n";
-    std::cout << "uid: " << st.st_uid << std::endl;
-    std::cout << "gid: " << st.st_gid << std::endl;
-    std::cout << "mode: " << st.st_mode << std::endl;
-    std::cout << "atime: " << st.st_atime << std::endl;
-    std::cout << "mtime: " << st.st_mtime << std::endl;
-    std::cout << "ctime: " << st.st_ctime << std::endl;
-  }
+  fuseefs::Engine engine(fusee_client_conf, FLAGS_central_erpc_hostname, FLAGS_central_erpc_port,
+                         FLAGS_local_erpc_hostname, FLAGS_local_erpc_port);
+  engine.InitThread(0);
 
-  if ((ret = stat(dirPath.c_str(), &st)) < 0) {
-    std::cerr << "stat failed: "<< ret << "\n";
-    return 1;
-  } else {
-    std::cout << "stat success: "<< ret << "\n";
-    std::cout << "uid: " << st.st_uid << std::endl;
-    std::cout << "gid: " << st.st_gid << std::endl;
-    std::cout << "mode: " << st.st_mode << std::endl;
-    std::cout << "atime: " << st.st_atime << std::endl;
-    std::cout << "mtime: " << st.st_mtime << std::endl;
-    std::cout << "ctime: " << st.st_ctime << std::endl;
-  }
+  ret = engine.Mkdir("/test", 0, 0, 0755);
+  assert(ret == 0);
+  ret = engine.Mkdir("/test/test1", 0, 0, 0755);
+  assert(ret == 0);
+  ret = engine.Mkdir("/test/test2", 0, 0, 0755);
+  assert(ret == 0);
+  ret = engine.Mkdir("/test/test3", 0, 0, 0755);
+  assert(ret == 0);
 
-  // Test remove
-  if ((ret = remove(filePath.c_str())) < 0) {
-    std::cerr << "remove failed: "<< ret << "\n";
-    return 1;
-  } else {
-    std::cout << "remove success: "<< ret << "\n";
-  }
+  ret = engine.Creat("/test/test1/file1", 0, 0, 0644);
+  assert(ret == 0);
+  ret = engine.Creat("/test/test1/file2", 0, 0, 0644);
+  assert(ret == 0);
+  ret = engine.Creat("/test/test1/file3", 0, 0, 0644);
+  assert(ret == 0);
 
-  // Test rmdir
-  if ((ret = rmdir(dirPath.c_str())) < 0) {
-    std::cerr << "rmdir failed: "<< ret << "\n";
-    return 1;
-  } else {
-    std::cout << "rmdir success: "<< ret << "\n";
-  }
+  fuseefs::Inode inode;
+  ret = engine.Stat("/test/test1/file1", 0, 0, inode);
+  assert(ret == 0);
+  ret = engine.Stat("/test/test1/file2", 0, 0, inode);
+  assert(ret == 0);
+  ret = engine.Stat("/test/test1/file3", 0, 0, inode);
+  assert(ret == 0);
 
-  if ((ret = stat(filePath.c_str(), &st)) < 0) {
-    std::cerr << "stat failed: "<< ret << "\n";
-  } else {
-    std::cout << "stat success: "<< ret << "\n";
-    std::cout << "uid: " << st.st_uid << std::endl;
-    std::cout << "gid: " << st.st_gid << std::endl;
-    std::cout << "mode: " << st.st_mode << std::endl;
-    std::cout << "atime: " << st.st_atime << std::endl;
-    std::cout << "mtime: " << st.st_mtime << std::endl;
-    std::cout << "ctime: " << st.st_ctime << std::endl;
-    return 1;
-  }
+  ret = engine.Unlink("/test/test1/file1", 0, 0);
+  assert(ret == 0);
+  ret = engine.Unlink("/test/test1/file2", 0, 0);
+  assert(ret == 0);
+  ret = engine.Unlink("/test/test1/file3", 0, 0);
+  assert(ret == 0);
 
-  if ((ret = stat(dirPath.c_str(), &st)) < 0) {
-    std::cerr << "stat failed: "<< ret << "\n";
-  } else {
-    std::cout << "stat success: "<< ret << "\n";
-    std::cout << "uid: " << st.st_uid << std::endl;
-    std::cout << "gid: " << st.st_gid << std::endl;
-    std::cout << "mode: " << st.st_mode << std::endl;
-    std::cout << "atime: " << st.st_atime << std::endl;
-    std::cout << "mtime: " << st.st_mtime << std::endl;
-    std::cout << "ctime: " << st.st_ctime << std::endl;
-    return 1;
-  }
+  ret = engine.Rmdir("/test/test1", 0, 0);
+  assert(ret == 0);
+  ret = engine.Rmdir("/test/test2", 0, 0);
+  assert(ret == 0);
+  ret = engine.Rmdir("/test/test3", 0, 0);
+  assert(ret == 0);
+  ret = engine.Rmdir("/test", 0, 0);
+  assert(ret == 0);
 
+  printf("test passed\n");
 
-  std::cout << "All tests passed\n";
   return 0;
 }

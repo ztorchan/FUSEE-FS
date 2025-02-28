@@ -295,17 +295,13 @@ int Client::kv_insert(KVInfo * kv_info) {
     ctx.lkey = local_buf_mr_->lkey;
 
     // print_log(DEBUG, "[%s] start", __FUNCTION__);
-    printf("prepare request\n");
     prepare_request(&ctx);
-    printf("kv insert read buckets and write kv\n");
     kv_insert_read_buckets_and_write_kv(&ctx);
-    printf("kv insert backup consensus 0\n");
     kv_insert_backup_consensus_0(&ctx);
     if (num_idx_rep_ > 1) {
         kv_insert_backup_consensus_1(&ctx);
         kv_insert_commit_log(&ctx);
     }
-    printf("kv insert cas primary\n");
     kv_insert_cas_primary(&ctx);
     return ctx.ret_val.ret_code;
 }
@@ -1352,27 +1348,17 @@ void Client::prepare_log_commit_addrs(KVReqCtx * ctx) {
     uint32_t commit_offset = tail_offset + offsetof(KVLogTail, old_value);
     uint32_t unused_offset = tail_offset + offsetof(KVLogTail, op);
     for (int i = 0; i < num_replication_; i ++) {
-        printf("idx: %d, server_id: %d\n", i, ctx->mm_alloc_ctx.server_id_list[i]);
         KVRWAddr * cur_rw_addr = &(ctx->log_commit_addr_list[i]);
-        printf("idx: %d, server_id: %d\n", i, ctx->mm_alloc_ctx.server_id_list[i]);
         cur_rw_addr->r_kv_addr = ctx->mm_alloc_ctx.addr_list[i] + commit_offset;
-        printf("idx: %d, server_id: %d\n", i, ctx->mm_alloc_ctx.server_id_list[i]);
         cur_rw_addr->server_id = ctx->mm_alloc_ctx.server_id_list[i];
-        printf("idx: %d, server_id: %d\n", i, ctx->mm_alloc_ctx.server_id_list[i]);
         cur_rw_addr->rkey = ctx->mm_alloc_ctx.rkey_list[i];
-        printf("idx: %d, server_id: %d\n", i, ctx->mm_alloc_ctx.server_id_list[i]);
 
         cur_rw_addr = &(ctx->write_unused_addr_list[i]);
-        printf("idx: %d, server_id: %d\n", i, ctx->mm_alloc_ctx.server_id_list[i]);
         cur_rw_addr->r_kv_addr = ctx->mm_alloc_ctx.addr_list[i] + unused_offset;
-        printf("idx: %d, server_id: %d\n", i, ctx->mm_alloc_ctx.server_id_list[i]);
         cur_rw_addr->server_id = ctx->mm_alloc_ctx.server_id_list[i];
 
-        printf("idx: %d, server_id: %d\n", i, ctx->mm_alloc_ctx.server_id_list[i]);
         cur_rw_addr->rkey = ctx->mm_alloc_ctx.rkey_list[i];
-        printf("idx: %d, server_id: %d\n", i, ctx->mm_alloc_ctx.server_id_list[i]);
     }
-    printf("prepare log commit addrs finished\n");
 }
 
 void Client::find_kv_in_buckets(KVReqCtx * ctx) {
@@ -2479,9 +2465,14 @@ void Client::kv_search_read_kv(KVReqCtx * ctx) {
     return;
 }
 
+std::atomic_uint64_t search_count;
+std::atomic_uint64_t search_hit_count;
+
 void Client::kv_search_read_kv_sync(KVReqCtx * ctx) {
     int ret = 0;
+    search_count++;
     if (ctx->use_cache && ctx->is_local_cache_hit) {
+        search_hit_count++;
         KVLogHeader * cached_header = (KVLogHeader *)ctx->local_cache_addr;
         KVLogTail   * cached_tail   = (KVLogTail *)((uint64_t)ctx->local_cache_addr
             + sizeof(KVLogHeader) + cached_header->key_length + cached_header->value_length);
@@ -2562,7 +2553,7 @@ void Client::kv_search_check_kv(KVReqCtx * ctx) {
         }
         return;
     } else {
-        printf("no match!\n");
+        // printf("no match!\n");
         // print_log(DEBUG, "\t[%s] 2. key not found finish", __FUNCTION__);
         ctx->ret_val.value_addr = NULL;
         ctx->is_finished = true;
@@ -2669,7 +2660,6 @@ void Client::kv_insert_read_buckets_and_write_kv(KVReqCtx * ctx) {
 
     // 1. allocate remote memory
     // print_log(DEBUG, "\t[%s fb%d %ld]   1. Allocate remote memory", __FUNCTION__, ctx->coro_id, boost::this_fiber::get_id());
-    printf("mm_alloc\n");
     uint32_t kv_block_size = header->key_length + header->value_length + sizeof(KVLogHeader) + sizeof(KVLogTail);
     mm_->mm_alloc(kv_block_size, nm_, ctx->key_str, &ctx->mm_alloc_ctx);
     if (ctx->mm_alloc_ctx.addr_list[0] < server_st_addr_ || ctx->mm_alloc_ctx.addr_list[0] >= server_st_addr_ + server_data_len_) {
@@ -2679,9 +2669,7 @@ void Client::kv_insert_read_buckets_and_write_kv(KVReqCtx * ctx) {
     }
 
     // 2. update kv header and prepare log commit addr
-    printf("update_log_tail\n");
     update_log_tail(tail, &ctx->mm_alloc_ctx);
-    printf("prepare_log_commit_addrs\n");
     prepare_log_commit_addrs(ctx);
 
     // 2. generate send requests (write_kv and read_bucket)
@@ -2690,9 +2678,7 @@ void Client::kv_insert_read_buckets_and_write_kv(KVReqCtx * ctx) {
     uint32_t read_bucket_sr_list_num;
     uint32_t update_prev_sr_list_num = 0;
     // 2.2 generate read bucket sr
-    printf("gen_write_kv_sr_lists\n");
     IbvSrList * write_kv_sr_list = gen_write_kv_sr_lists(ctx->coro_id, ctx->kv_info, &ctx->mm_alloc_ctx, &write_kv_sr_list_num);
-    printf("gen_read_bucket_sr_lists\n");
     IbvSrList * read_bucket_sr_list = gen_read_bucket_sr_lists(ctx, &read_bucket_sr_list_num);
 
     // 2.3 merge these requests
@@ -2706,7 +2692,6 @@ void Client::kv_insert_read_buckets_and_write_kv(KVReqCtx * ctx) {
     // 3. post requests and wait for completion
     // print_log(DEBUG, "\t[%s fb%d %ld]   3. post requests and wait for completion", __FUNCTION__, ctx->coro_id, boost::this_fiber::get_id());
     // ret = post_sr_list_batch_and_yield_wait(kv_insert_p1_sr_list_batch, kv_insert_p1_sr_list_num_batch, ctx->should_stop);
-    printf("post_sr_list_batch_and_yield_wait\n");
     ret = post_sr_list_batch_and_yield_wait(kv_insert_p1_sr_list_batch, kv_insert_p1_sr_list_num_batch);
     // kv_assert(ret == 0);
     free_write_kv_sr_lists(write_kv_sr_list);

@@ -22,6 +22,9 @@
 #define CLINET_INPUT_BUF_LEN  (512 * 1024 * 1024ULL)
 #define CORO_LOCAL_BUF_LEN    (32 * 1024 * 1024)
 
+extern std::atomic_uint64_t search_count;
+extern std::atomic_uint64_t search_hit_count;
+
 enum KVOpsCrashPoint {
     KV_CRASH_UNCOMMITTED_BK_CONSENSUS_0,
     KV_CRASH_UNCOMMITTED_BK_CONSENSUS_1,
@@ -456,7 +459,7 @@ private:
         std::vector<uint32_t> sr_list_batch_num);
     int post_sr_list_batch_and_yield_wait(std::vector<IbvSrList *> sr_list_batch, std::vector<uint32_t> sr_list_num_batch, volatile bool * should_stop);
 
-    void init_kv_req_ctx(KVReqCtx * req_ctx, KVInfo * kv_info, char * operation);
+    // void init_kv_req_ctx(KVReqCtx * req_ctx, KVInfo * kv_info, char * operation);
     void update_log_tail(KVLogTail * log_header, ClientMMAllocCtx * alloc_ctx);
 
     int  client_recovery();
@@ -466,6 +469,8 @@ private:
 
 // inline methods
 public:
+    void init_kv_req_ctx(KVReqCtx * req_ctx, KVInfo * kv_info, char * operation);
+
     inline void * get_input_buf() {
         return input_buf_;
     }

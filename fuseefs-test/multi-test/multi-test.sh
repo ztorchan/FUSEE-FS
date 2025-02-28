@@ -22,7 +22,7 @@ sleep 3
 
 trap stop_all EXIT
 
-sleep 100000000
+# sleep 100000000
 
-# ${BIN_DIR}/fuseefs_simple_test --local_erpc_hostname=127.0.0.1 --local_erpc_port=31851 --central_erpc_hostname=127.0.0.1 --central_erpc_port=31850 --fusee_client_conf=${TEST_DIR}/mds.json
+${BIN_DIR}/fuseefs_multi_test --thread=1 --local_erpc_hostname=127.0.0.1 --local_erpc_port=31851 --central_erpc_hostname=127.0.0.1 --central_erpc_port=31850 --fusee_client_conf=${TEST_DIR}/mds.json
 
